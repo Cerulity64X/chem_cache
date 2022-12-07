@@ -89,6 +89,9 @@ impl SerCompound {
             identifier: inchikey.to_string(),
         }
     }
+    pub fn with_nmsp_iden(namespace: &str, identifier: &str) -> SerCompound{
+        SerCompound { namespace: namespace.to_owned(), identifier: identifier.to_owned() }
+    }
     pub fn to_compound(&self) -> Result<Option<Compound>, Box<dyn Error>> {
         match &self.namespace[..] {
             "cid" => Ok(Some(Compound::new(self.identifier.parse::<u32>()?))),
@@ -145,6 +148,10 @@ impl CompoundCache {
         self.cache.insert(key, val);
     }
 
+    pub fn contains(&self, key: &SerCompound) -> bool {
+        self.cache.contains_key(key)
+    }
+
     pub fn serialize(&self) -> Result<Value, String> {
         let mut arr: Vec<Value> = Vec::new();
         for (cmp, prop) in &self.cache {
@@ -182,7 +189,7 @@ impl CompoundCache {
                 properties.insert("inchi_key".to_owned(), Value::String(prop.inchi_key.as_ref().unwrap().clone()));
                 properties.insert("isomeric_smiles".to_owned(), Value::String(prop.isomeric_smiles.as_ref().unwrap().clone()));
                 properties.insert("isotope_atom_count".to_owned(), prop.isotope_atom_count.unwrap().into());
-                properties.insert("iupac_name".to_owned(), valify_string(&prop.iupac_name));
+                properties.insert("iupac_name".to_owned(), valify_string_op(&prop.iupac_name));
                 properties.insert("molecular_formula".to_owned(), Value::String(prop.molecular_formula.as_ref().unwrap().clone()));
                 properties.insert("molecular_weight".to_owned(), Value::String(prop.molecular_weight.as_ref().unwrap().clone()));
                 properties.insert("monoisotopic_mass".to_owned(), Value::String(prop.monoisotopic_mass.as_ref().unwrap().clone()));
@@ -278,9 +285,56 @@ impl CompoundCache {
     }
 }
 
-pub fn valify_string(string: &Option<String>) -> Value {
+pub fn valify_string_op(string: &Option<String>) -> Value {
     match string {
         Some(st) => Value::String(st.clone()),
         None => Value::Null
+    }
+}
+
+pub fn propclone(props: &Properties) -> Properties {
+    Properties {
+        cid: props.cid,
+        molecular_formula: props.molecular_formula.clone(),
+        molecular_weight: props.molecular_weight.clone(),
+        canonical_smiles: props.canonical_smiles.clone(),
+        isomeric_smiles: props.isomeric_smiles.clone(),
+        inchi: props.inchi.clone(),
+        inchi_key: props.inchi_key.clone(),
+        iupac_name: props.iupac_name.clone(),
+        xlogp: props.xlogp.clone(),
+        exact_mass: props.exact_mass.clone(),
+        monoisotopic_mass: props.monoisotopic_mass.clone(),
+        tpsa: props.tpsa,
+        complexity: props.complexity,
+        charge: props.charge,
+        hbond_donor_count: props.hbond_donor_count,
+        hbond_acceptor_count: props.hbond_acceptor_count,
+        rotatable_bond_count: props.rotatable_bond_count,
+        heavy_atom_count: props.heavy_atom_count,
+        isotope_atom_count: props.isotope_atom_count,
+        atom_stereo_count: props.atom_stereo_count,
+        defined_atom_stereo_count: props.defined_atom_stereo_count,
+        undefined_atom_stereo_count: props.undefined_atom_stereo_count,
+        bond_stereo_count: props.bond_stereo_count,
+        defined_bond_stereo_count: props.defined_bond_stereo_count,
+        undefined_bond_stereo_count: props.undefined_bond_stereo_count,
+        covalent_unit_count: props.covalent_unit_count,
+        volume_3d: props.volume_3d,
+        x_steric_quadrupole_3d: props.x_steric_quadrupole_3d,
+        y_steric_quadrupole_3d: props.y_steric_quadrupole_3d,
+        z_steric_quadrupole_3d: props.z_steric_quadrupole_3d,
+        feature_count_3d: props.feature_count_3d,
+        feature_acceptor_count_3d: props.feature_acceptor_count_3d,
+        feature_donor_count_3d: props.feature_donor_count_3d,
+        feature_anion_count_3d: props.feature_anion_count_3d,
+        feature_cation_count_3d: props.feature_cation_count_3d,
+        feature_ring_count_3d: props.feature_ring_count_3d,
+        feature_hydrophobe_count_3d: props.feature_hydrophobe_count_3d,
+        conformer_model_rmsd_3d: props.conformer_model_rmsd_3d,
+        effective_rotor_count_3d: props.effective_rotor_count_3d,
+        conformer_count_3d: props.conformer_count_3d,
+        fingerprint_2d: props.fingerprint_2d.clone(),
+        title: props.title.clone()
     }
 }
