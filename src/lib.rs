@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::{collections::HashMap, hash::Hash, error::Error};
 
 use pubchem::{Compound, model::rest::Properties, CompoundProperty};

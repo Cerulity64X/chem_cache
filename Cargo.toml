@@ -1,5 +1,5 @@
 [package]
-name = "chem_cache"
+name = "chem_storage"
 version = "0.1.0"
 edition = "2021"
 
