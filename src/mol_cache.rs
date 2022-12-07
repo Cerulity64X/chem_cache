@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, error::Error};
 
 use pubchem::{Compound, model::rest::Properties, CompoundProperty};
 use serde_json::{value::Serializer, Value, Map, json};
@@ -52,12 +52,53 @@ const ALL_PROPERTIES: &[CompoundProperty] = &[
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct SerCompound {
-    namespace: String,
-    identifier: String
+    pub namespace: String,
+    pub identifier: String
 }
 impl SerCompound {
-    pub fn from(cmp: &Compound) -> SerCompound {
+    // Visibility issues forbid this
+    /*pub fn from(cmp: &Compound) -> SerCompound {
         SerCompound { namespace: cmp.namespace.to_string(), identifier: cmp.identifier.to_string() }
+    }*/
+    pub fn new(id: u32) -> Self {
+        Self {
+            namespace: String::from("cid"),
+            identifier: id.to_string(),
+        }
+    }
+    pub fn with_name(name: &str) -> Self {
+        Self {
+            namespace: String::from("name"),
+            identifier: name.to_string(),
+        }
+    }
+    pub fn with_smiles(smiles: &str) -> Self {
+        Self {
+            namespace: String::from("smiles"),
+            identifier: smiles.to_string(),
+        }
+    }
+    pub fn with_inchi(inchi: &str) -> Self {
+        Self {
+            namespace: String::from("inchi"),
+            identifier: inchi.to_string(),
+        }
+    }
+    pub fn with_inchikey(inchikey: &str) -> Self {
+        Self {
+            namespace: String::from("inchikey"),
+            identifier: inchikey.to_string(),
+        }
+    }
+    pub fn to_compound(&self) -> Result<Option<Compound>, Box<dyn Error>> {
+        match &self.namespace[..] {
+            "cid" => Ok(Some(Compound::new(self.identifier.parse::<u32>()?))),
+            "name" => Ok(Some(Compound::with_name(&self.identifier))),
+            "smiles" => Ok(Some(Compound::with_smiles(&self.identifier))),
+            "inchi" => Ok(Some(Compound::with_inchi(&self.identifier))),
+            "inchikey" => Ok(Some(Compound::with_inchikey(&self.identifier))),
+            _ => Ok(None)
+        }
     }
 }
 
@@ -70,32 +111,32 @@ impl CompoundCache {
         CompoundCache { cache: HashMap::new() }
     }
     /// Use overwrite for overwriting, this will not insert if value exists. If the compound namespaces are not the same, then the compound properties will be duplicated.
-    pub fn store(&mut self, cmp: &Compound) -> Result<(), pubchem::error::Error> {
-        let owned: SerCompound = SerCompound::from(cmp);
-        if !self.cache.contains_key(&owned) {
-            self.cache.insert(owned, cmp.properties(ALL_PROPERTIES)?);
+    pub fn store(&mut self, cmp: SerCompound) -> Result<(), Box<dyn Error>> {
+        if !self.cache.contains_key(&cmp) {
+            let props = cmp.to_compound()?.ok_or(String::new())?.properties(ALL_PROPERTIES)?;
+            self.cache.insert(cmp, props);
         }
         Ok(())
     }
     /// Overwrites properties.
-    pub fn overwrite(&mut self, cmp: &Compound) -> Result<(), pubchem::error::Error>{
-        self.cache.insert(SerCompound::from(cmp), cmp.properties(ALL_PROPERTIES)?);
+    pub fn overwrite(&mut self, cmp: SerCompound) -> Result<(), Box<dyn Error>>{
+        let props = cmp.to_compound()?.ok_or(String::new())?.properties(ALL_PROPERTIES)?;
+        self.cache.insert(cmp, props);
         Ok(())
     }
     /// If the compound does not exist, the properties are added and returned.
-    pub fn get(&mut self, cmp: &Compound) -> Result<(bool, &Properties), pubchem::error::Error> {
-        let owned = SerCompound::from(cmp);
-        let haskey = self.cache.contains_key(&owned);
+    pub fn get(&mut self, cmp: SerCompound) -> Result<(bool, &Properties), Box<dyn Error>> {
+        let props = cmp.to_compound()?.ok_or(String::new())?.properties(ALL_PROPERTIES)?;
+        let haskey = self.cache.contains_key(&cmp);
         if !haskey {
-            self.cache.insert(owned.clone(), cmp.properties(ALL_PROPERTIES)?);
+            self.cache.insert(cmp.clone(), props);
         }
-        Ok((haskey, &self.cache[&owned]))
+        Ok((haskey, &self.cache[&cmp]))
     }
     /// If the compound does not exist, None is returned. Does not make a PubChem request.
-    pub fn get_noreq(&self, cmp: &Compound) -> Result<Option<&Properties>, pubchem::error::Error> {
-        let owned = SerCompound::from(cmp);
-        if self.cache.contains_key(&owned) {
-            Ok(Some(&self.cache[&owned]))
+    pub fn get_noreq(&self, cmp: SerCompound) -> Result<Option<&Properties>, pubchem::error::Error> {
+        if self.cache.contains_key(&cmp) {
+            Ok(Some(&self.cache[&cmp]))
         } else {
             Ok(None)
         }
