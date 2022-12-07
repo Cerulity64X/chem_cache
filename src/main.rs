@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         fs::read_to_string("compounds.json").unwrap_or(String::from("{}"))
     ).unwrap_or(CompoundCache::new());
 
-    cache.get(&Compound::with_name("Carbon Dioxide"))?;
+    cache.get(&Compound::with_smiles("O"))?;
 
     // write compounds
     fs::write("compounds.json", cache.serialize()?.to_string())?;
