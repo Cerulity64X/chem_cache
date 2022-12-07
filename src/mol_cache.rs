@@ -1,9 +1,7 @@
 use std::{collections::HashMap, hash::Hash, error::Error};
 
 use pubchem::{Compound, model::rest::Properties, CompoundProperty};
-use serde_json::{value::Serializer, Value, Map, json};
-
-type Prop = CompoundProperty;
+use serde_json::{Value, Map};
 
 const ALL_PROPERTIES: &[CompoundProperty] = &[
     // big property
